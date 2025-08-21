@@ -4,6 +4,7 @@ using WebApplication1;
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.IO.Compression;
 
 namespace WebApplication1.Controllers
 {
@@ -23,8 +24,21 @@ namespace WebApplication1.Controllers
             Response.Headers["Cache-Control"] = "no-store, no-cache, must-revalidate";
             Response.Headers["Pragma"] = "no-cache";
             Response.Headers["Expires"] = "0";
-            // Gzip header is now set by middleware
-            return File(_cachedTaskList.ToByteArray(), "application/x-protobuf");
+            var data = _cachedTaskList.ToByteArray();
+
+            // Check if client accepts gzip
+            if (Request.Headers.AcceptEncoding.ToString().Contains("gzip"))
+            {
+                Response.Headers["Content-Encoding"] = "gzip";
+                using var output = new MemoryStream();
+                using (var gzip = new GZipStream(output, CompressionMode.Compress))
+                {
+                    gzip.Write(data, 0, data.Length);
+                }
+                return File(output.ToArray(), "application/x-protobuf");
+            }
+
+            return File(data, "application/x-protobuf");
         }
 
         [HttpGet("json")]

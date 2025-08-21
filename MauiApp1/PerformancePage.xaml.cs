@@ -41,8 +41,8 @@ namespace MauiApp1
             Results.Clear();
             RefreshChart();
 
-            string protoUrl = "http://10.0.2.2:5233/tasks/protobuf";
-            string jsonUrl = "http://10.0.2.2:5233/tasks/json";
+            string protoUrl = "https://mauiapp1-3.onrender.com/tasks/protobuf";
+            string jsonUrl = "https://mauiapp1-3.onrender.com/tasks/json";
 
             using var client = new HttpClient(new HttpClientHandler { UseCookies = false });
             client.DefaultRequestHeaders.CacheControl = new System.Net.Http.Headers.CacheControlHeaderValue
