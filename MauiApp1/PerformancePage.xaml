@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             x:Class="MauiApp1.PerformancePage">
+    <ScrollView>
+        <VerticalStackLayout Padding="12" Spacing="10" BackgroundColor="#F5F6FA">
+            <Label x:Name="DownloadInfoLabel" FontSize="16" TextColor="Black" Padding="0,0,0,8" />
+            <Label x:Name="AvgDurationLabel" FontSize="15" TextColor="Gray" Padding="0,0,0,8" />
+            <VerticalStackLayout Spacing="2" Padding="4" BackgroundColor="White">
+                <ScrollView Orientation="Horizontal">
+                    <GraphicsView x:Name="PerfChart" HeightRequest="230" WidthRequest="800" HorizontalOptions="Start" />
+                </ScrollView>
+            </VerticalStackLayout>
+        </VerticalStackLayout>
+    </ScrollView>
+</ContentPage>

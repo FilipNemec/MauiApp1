@@ -1,0 +1,55 @@
+﻿<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             x:Class="MauiApp1.MainPage">
+
+    <VerticalStackLayout>
+        <HorizontalStackLayout Padding="10" Spacing="10">
+        <Button Text="Benchmark starten" Clicked="OnRunBenchmarkClicked" />
+        <ListView ItemsSource="{Binding ProgressList}" HeightRequest="300">
+            <ListView.ItemTemplate>
+                <DataTemplate>
+                    <TextCell Text="{Binding .}" />
+                </DataTemplate>
+            </ListView.ItemTemplate>
+        </ListView>
+            <Button Text="Performance" Clicked="OnShowPerformanceClicked" />
+        </HorizontalStackLayout>
+        <CollectionView ItemsSource="{Binding Tasks}">
+        <CollectionView.ItemTemplate>
+            <DataTemplate>
+                <StackLayout Padding="10" BackgroundColor="#f5f5f5" Margin="5">
+                    <Label Text="{Binding Name}" FontAttributes="Bold" FontSize="18" />
+                    <Label Text="Fläche: {Binding Area}" FontSize="14" />
+                    <Label Text="Boundary-Typ: {Binding Boundary.Type}" FontSize="12" />
+                    <Label Text="CropSeasons:" FontAttributes="Bold" FontSize="14" />
+                    <CollectionView ItemsSource="{Binding CropSeasonsV2}" Margin="0,5,0,0">
+                        <CollectionView.ItemTemplate>
+                            <DataTemplate>
+                                <StackLayout>
+                                    <Label Text="Sorte: {Binding Variety.Name}" FontSize="14" />
+                                    <Label Text="Status: {Binding LifecycleState}" FontSize="12" />
+                                    <Label Text="Start: {Binding StartDate}" FontSize="12" />
+                                    <Label Text="Sprayings:" FontAttributes="Bold" FontSize="12" />
+                                    <CollectionView ItemsSource="{Binding SprayingsV2}" Margin="0,5,0,0">
+                                        <CollectionView.ItemTemplate>
+                                            <DataTemplate>
+                                                <StackLayout>
+                                                    <Label Text="Produkt: {Binding DosedMap.RecipeV2[0].Name}" FontSize="12" />
+                                                    <Label Text="Typ: {Binding DosedMap.RecipeV2[0].Type}" FontSize="12" />
+                                                    <Label Text="Aktion: {Binding DosedMap.ActionTypes[0]}" FontSize="12" />
+                                                </StackLayout>
+                                            </DataTemplate>
+                                        </CollectionView.ItemTemplate>
+                                    </CollectionView>
+                                </StackLayout>
+                            </DataTemplate>
+                        </CollectionView.ItemTemplate>
+                    </CollectionView>
+                </StackLayout>
+            </DataTemplate>
+        </CollectionView.ItemTemplate>
+        </CollectionView>
+    </VerticalStackLayout>
+
+</ContentPage>

@@ -1,0 +1,91 @@
+syntax = "proto3";
+
+message TaskList {
+  repeated Task tasks = 1;
+}
+
+message Task {
+  string uuid = 1;
+  string name = 2;
+  double area = 3;
+  Boundary boundary = 4;
+  repeated CropSeason cropSeasonsV2 = 5;
+}
+
+message Boundary {
+  string type = 1;
+  repeated MultiPolygon coordinates = 2;
+}
+
+message MultiPolygon {
+  repeated Polygon polygons = 1;
+}
+
+message Polygon {
+  repeated Coordinate coordinates = 1;
+}
+
+message Coordinate {
+  double lon = 1;
+  double lat = 2;
+}
+
+message CropSeason {
+  string uuid = 1;
+  bool isHealthyField = 2;
+  string lifecycleState = 3;
+  Crop crop = 4;
+  string startDate = 5;
+  Variety variety = 6;
+  repeated Spraying sprayingsV2 = 7;
+  repeated CropEstablishment cropEstablishments = 8;
+  repeated Harvest harvests = 9;
+}
+
+message Crop {
+  string uuid = 1;
+}
+
+message Variety {
+  string name = 1;
+}
+
+message Spraying {
+  string uuid = 1;
+  string plannedDate = 2;
+  string executionDate = 3;
+  string state = 4;
+  string assignmentState = 5;
+  string assignee = 6;
+  DosedMap dosedMap = 7;
+}
+
+message DosedMap {
+  string uuid = 1;
+  string creationFlowHint = 2;
+  string applicationType = 3;
+  string applicationMode = 4;
+  repeated Recipe recipeV2 = 5;
+  repeated string actionTypes = 6;
+}
+
+message Recipe {
+  string name = 1;
+  string type = 2;
+}
+
+message CropEstablishment {
+  string uuid = 1;
+  string assignmentState = 2;
+  string assignee = 3;
+}
+
+message Harvest {
+  string uuid = 1;
+  string plannedDate = 2;
+  string executionDate = 3;
+  string state = 4;
+  string assignmentState = 5;
+  double yield = 6;
+  string assignee = 7;
+}
