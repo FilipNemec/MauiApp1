@@ -44,7 +44,12 @@ namespace MauiApp1
             string protoUrl = "https://mauiapp1-3.onrender.com/tasks/protobuf";
             string jsonUrl = "https://mauiapp1-3.onrender.com/tasks/json";
 
-            using var client = new HttpClient(new HttpClientHandler { UseCookies = false });
+            using var client = new HttpClient(new HttpClientHandler
+            {
+                UseCookies = false,
+                AutomaticDecompression = System.Net.DecompressionMethods.GZip | System.Net.DecompressionMethods.Deflate | System.Net.DecompressionMethods.Brotli
+            });
+
             client.DefaultRequestHeaders.CacheControl = new System.Net.Http.Headers.CacheControlHeaderValue
             {
                 NoCache = true,
@@ -52,6 +57,12 @@ namespace MauiApp1
                 MustRevalidate = true
             };
             client.DefaultRequestHeaders.ConnectionClose = false;
+
+            // Add Accept-Encoding header to request gzip compression
+            client.DefaultRequestHeaders.AcceptEncoding.Clear();
+            client.DefaultRequestHeaders.AcceptEncoding.Add(new System.Net.Http.Headers.StringWithQualityHeaderValue("gzip"));
+            client.DefaultRequestHeaders.AcceptEncoding.Add(new System.Net.Http.Headers.StringWithQualityHeaderValue("deflate"));
+            client.DefaultRequestHeaders.AcceptEncoding.Add(new System.Net.Http.Headers.StringWithQualityHeaderValue("br")); // Brotli
 
             // ---- Größe 1x messen ----
             var jsonSizeResult = await LoadTasksOnce(client, jsonUrl, false);
@@ -99,6 +110,13 @@ namespace MauiApp1
 
                 var bytes = await response.Content.ReadAsByteArrayAsync();
                 sw.Stop();
+
+                // Optional: Log compression info for debugging
+                var contentEncoding = response.Content.Headers.ContentEncoding?.FirstOrDefault();
+                if (!string.IsNullOrEmpty(contentEncoding))
+                {
+                    System.Diagnostics.Debug.WriteLine($"Response compressed with: {contentEncoding}");
+                }
 
                 // Deserialisierung
                 if (isProtobuf)
@@ -157,6 +175,7 @@ namespace MauiApp1
             }
         }
 
+        // ... rest of your PerfChartDrawable class remains the same ...
         public sealed class PerfChartDrawable : IDrawable
         {
             private readonly List<PerformancePage.PerfResult> results;
@@ -343,6 +362,6 @@ namespace MauiApp1
                 canvas.DrawString(text, x + 20, y - 8, 80, 16,
                     HorizontalAlignment.Left, VerticalAlignment.Center);
             }
-}}    
-
+        }
+    }
 }
