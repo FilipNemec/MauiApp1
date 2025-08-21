@@ -2,24 +2,24 @@ using Microsoft.AspNetCore.ResponseCompression;
 using System.IO.Compression;
 
 var builder = WebApplication.CreateBuilder(args);
+
+// Configure Kestrel for Render.com deployment with HTTP/3 support
+var port = Environment.GetEnvironmentVariable("PORT") ?? "8080";
 builder.WebHost.ConfigureKestrel(options =>
 {
-    options.ListenAnyIP(50000, listenOptions =>
+    options.ListenAnyIP(int.Parse(port), listenOptions =>
     {
-        listenOptions.Protocols = Microsoft.AspNetCore.Server.Kestrel.Core.HttpProtocols.Http1;
-    });
-    options.ListenAnyIP(50001, listenOptions =>
-    {
-        listenOptions.UseHttps();
+        // Enable HTTP/1.1, HTTP/2, and HTTP/3
         listenOptions.Protocols = Microsoft.AspNetCore.Server.Kestrel.Core.HttpProtocols.Http1AndHttp2AndHttp3;
     });
 });
+
 // Add response compression for JSON and Protobuf
 builder.Services.AddResponseCompression(options =>
 {
     options.EnableForHttps = true;
     options.Providers.Add<GzipCompressionProvider>();
-    options.Providers.Add<BrotliCompressionProvider>(); // Optional: Also add Brotli
+    options.Providers.Add<BrotliCompressionProvider>();
     options.MimeTypes = new[]
     {
         "application/json",
@@ -39,7 +39,6 @@ builder.Services.Configure<BrotliCompressionProviderOptions>(options =>
 });
 
 // Add services to the container.
-// Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
 builder.Services.AddControllers();
 builder.Services.AddOpenApi();
 
@@ -51,7 +50,11 @@ if (app.Environment.IsDevelopment())
     app.MapOpenApi();
 }
 
-app.UseHttpsRedirection();
+// Enable HTTPS redirection if you have SSL configured on Render.com
+if (!app.Environment.IsDevelopment())
+{
+    app.UseHttpsRedirection();
+}
 
 app.UseResponseCompression();
 
