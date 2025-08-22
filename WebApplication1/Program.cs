@@ -44,10 +44,10 @@ builder.Services.Configure<BrotliCompressionProviderOptions>(options =>
 builder.Services.AddControllers();
 builder.Services.AddOpenApi();
 
-builder.Services.Configure<KestrelServerOptions>(options =>
-{
-    options.AllowSynchronousIO = true;
-});
+//builder.Services.Configure<KestrelServerOptions>(options =>
+//{
+//    options.AllowSynchronousIO = true;
+//});
 
 var app = builder.Build();
 

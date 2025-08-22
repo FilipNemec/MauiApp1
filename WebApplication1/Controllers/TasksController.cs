@@ -19,21 +19,23 @@ namespace WebApplication1.Controllers
     private static readonly TaskList _cachedTaskList = CreateMockTasksStatic();
 
         [HttpGet("protobuf")]
-        public IActionResult GetTasksProtobuf()
+        public async Task<IActionResult> GetTasksProtobuf()
         {
             Response.Headers["Cache-Control"] = "no-store, no-cache, must-revalidate";
             Response.Headers["Pragma"] = "no-cache";
             Response.Headers["Expires"] = "0";
             Response.ContentType = "application/x-protobuf";
-            Response.ContentType = "application/x-protobuf";
-            _cachedTaskList.WriteTo(Response.Body);
-            // The simplest fully asynchronous approach
-            //using (var memoryStream = new MemoryStream())
-            //{
-            //    _cachedTaskList.WriteTo(memoryStream);
-            //    memoryStream.Position = 0;
-            //    await memoryStream.CopyToAsync(Response.Body);
-            //}
+
+            var pipeWriter = Response.BodyWriter;
+
+            await using var stream = pipeWriter.AsStream(leaveOpen: true);
+
+            using var cos = new CodedOutputStream(stream, leaveOpen: true);
+
+            _cachedTaskList.WriteTo(cos);
+            cos.Flush();
+
+            await pipeWriter.FlushAsync(HttpContext.RequestAborted);
 
             return new EmptyResult();
         }
