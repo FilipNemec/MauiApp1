@@ -5,6 +5,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Net.Http;
 using System.Threading.Tasks;
+using System.Net;
 
 namespace MauiApp1
 {
@@ -40,15 +41,18 @@ namespace MauiApp1
             OnPropertyChanged(nameof(ProgressList));
             Results.Clear();
             RefreshChart();
-
             string protoUrl = "https://mauiapp1-3.onrender.com/tasks/protobuf";
             string jsonUrl = "https://mauiapp1-3.onrender.com/tasks/json";
 
-            using var client = new HttpClient(new HttpClientHandler
+            var handler = new HttpClientHandler
             {
                 UseCookies = false,
-                AutomaticDecompression = System.Net.DecompressionMethods.GZip | System.Net.DecompressionMethods.Deflate | System.Net.DecompressionMethods.Brotli
-            });
+                AutomaticDecompression = DecompressionMethods.GZip | DecompressionMethods.Deflate | DecompressionMethods.Brotli
+            };
+            using var client = new HttpClient(handler)
+            {
+                DefaultRequestVersion = HttpVersion.Version30
+            };
 
             client.DefaultRequestHeaders.CacheControl = new System.Net.Http.Headers.CacheControlHeaderValue
             {
@@ -58,18 +62,19 @@ namespace MauiApp1
             };
             client.DefaultRequestHeaders.ConnectionClose = false;
 
-            // Add Accept-Encoding header to request gzip compression
-            client.DefaultRequestHeaders.AcceptEncoding.Clear();
-            client.DefaultRequestHeaders.AcceptEncoding.Add(new System.Net.Http.Headers.StringWithQualityHeaderValue("gzip"));
-            client.DefaultRequestHeaders.AcceptEncoding.Add(new System.Net.Http.Headers.StringWithQualityHeaderValue("deflate"));
-            client.DefaultRequestHeaders.AcceptEncoding.Add(new System.Net.Http.Headers.StringWithQualityHeaderValue("br")); // Brotli
-
             // ---- Größe 1x messen ----
             var jsonSizeResult = await LoadTasksOnce(client, jsonUrl, false);
             var protoSizeResult = await LoadTasksOnce(client, protoUrl, true);
-            double jsonKb = Math.Round(jsonSizeResult.Bytes / 1024.0, 2);
-            double protoKb = Math.Round(protoSizeResult.Bytes / 1024.0, 2);
-            DownloadInfoLabel.Text = $"downloadsize: JSON = {jsonKb} KB , Protobuf = {protoKb} KB";
+            // Only show Content-Length for JSON and Protobuf
+            var jsonResponse = await client.GetAsync(jsonUrl, HttpCompletionOption.ResponseHeadersRead);
+            long jsonContentLength = jsonResponse.Content.Headers.ContentLength ?? 0;
+            double jsonKbHeader = Math.Round(jsonContentLength / 1024.0, 2);
+
+            var protoResponse = await client.GetAsync(protoUrl, HttpCompletionOption.ResponseHeadersRead);
+            long protoContentLength = protoResponse.Content.Headers.ContentLength ?? 0;
+            double protoKbHeader = Math.Round(protoContentLength / 1024.0, 2);
+
+            DownloadInfoLabel.Text = $"JSON: Content-Length = {jsonKbHeader} KB\nProtobuf: Content-Length = {protoKbHeader} KB";
 
             Results.Clear();
             ProgressList.Clear();
@@ -97,55 +102,46 @@ namespace MauiApp1
             }
         }
 
-        private async Task<PerfResult> LoadTasksOnce(HttpClient client, string url, bool isProtobuf)
+        private async Task<PerfResult> LoadTasksOnce(HttpClient client, string url, bool isProtobuf, CancellationToken ct = default)
         {
             var sw = System.Diagnostics.Stopwatch.StartNew();
             try
             {
                 var cacheBuster = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
-                var fullUrl = url.Contains("?") ? url + "&cb=" + cacheBuster : url + "?cb=" + cacheBuster;
+                var fullUrl = url.Contains("?") ? $"{url}&cb={cacheBuster}" : $"{url}?cb={cacheBuster}";
 
-                var response = await client.GetAsync(fullUrl, HttpCompletionOption.ResponseContentRead);
+                using var response = await client.GetAsync(fullUrl, HttpCompletionOption.ResponseHeadersRead, ct).ConfigureAwait(false);
                 response.EnsureSuccessStatusCode();
 
-                var bytes = await response.Content.ReadAsByteArrayAsync();
+                await using var network = await response.Content.ReadAsStreamAsync(ct).ConfigureAwait(false);
+                // Puffern für weniger Syscalls:
+                using var buffered = new BufferedStream(network, 64 * 1024);
 
-
-                // Optional: Log compression info for debugging
-                var contentEncoding = response.Content.Headers.ContentEncoding?.FirstOrDefault();
-                if (!string.IsNullOrEmpty(contentEncoding))
-                {
-                    System.Diagnostics.Debug.WriteLine($"Response compressed with: {contentEncoding}");
-                }
-
-                // Deserialisierung
                 if (isProtobuf)
                 {
-                    var taskList = TaskList.Parser.ParseFrom(bytes);
+                    // Binary Parse direkt aus dem gepufferten Stream
+                    var taskList = TaskList.Parser.ParseFrom(buffered);
                 }
                 else
                 {
-                    var taskList = System.Text.Json.JsonSerializer.Deserialize<TaskList>(bytes);
+                    // JSON async aus Stream
+                    var taskList = await System.Text.Json.JsonSerializer.DeserializeAsync<TaskList>(buffered, cancellationToken: ct).ConfigureAwait(false);
                 }
-                sw.Stop();
-                long micros = (long)(sw.ElapsedTicks * 1_000_000.0 / System.Diagnostics.Stopwatch.Frequency);
 
-                return new PerfResult(
-                    isProtobuf ? SerializerType.Protobuf : SerializerType.JSON,
-                    bytes.Length,
-                    micros
-                );
+                sw.Stop();
+
+                // Größe: nimm Content-Length, wenn vorhanden; sonst 0 (= unbekannt)
+                long size = response.Content.Headers.ContentLength ?? 0;
+
+                long micros = (long)(sw.ElapsedTicks * 1_000_000.0 / System.Diagnostics.Stopwatch.Frequency);
+                return new PerfResult(isProtobuf ? SerializerType.Protobuf : SerializerType.JSON, size, micros);
             }
             catch (Exception ex)
             {
                 sw.Stop();
-                ProgressList.Add($"Fehler: {ex.Message}");
+                ProgressList.Add($"{(isProtobuf ? "Protobuf" : "JSON")} Fehler: {ex.Message}");
                 OnPropertyChanged(nameof(ProgressList));
-                return new PerfResult(
-                    isProtobuf ? SerializerType.Protobuf : SerializerType.JSON,
-                    0,
-                    0
-                );
+                return new PerfResult(isProtobuf ? SerializerType.Protobuf : SerializerType.JSON, 0, 0);
             }
         }
 
@@ -175,7 +171,6 @@ namespace MauiApp1
             }
         }
 
-        // ... rest of your PerfChartDrawable class remains the same ...
         public sealed class PerfChartDrawable : IDrawable
         {
             private readonly List<PerformancePage.PerfResult> results;
@@ -364,4 +359,5 @@ namespace MauiApp1
             }
         }
     }
+
 }
