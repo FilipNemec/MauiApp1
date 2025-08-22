@@ -24,21 +24,18 @@ namespace WebApplication1.Controllers
             Response.Headers["Cache-Control"] = "no-store, no-cache, must-revalidate";
             Response.Headers["Pragma"] = "no-cache";
             Response.Headers["Expires"] = "0";
-            var data = _cachedTaskList.ToByteArray();
+            Response.ContentType = "application/x-protobuf";
+            Response.ContentType = "application/x-protobuf";
+            _cachedTaskList.WriteTo(Response.Body);
+            // The simplest fully asynchronous approach
+            //using (var memoryStream = new MemoryStream())
+            //{
+            //    _cachedTaskList.WriteTo(memoryStream);
+            //    memoryStream.Position = 0;
+            //    await memoryStream.CopyToAsync(Response.Body);
+            //}
 
-            // Check if client accepts gzip
-            if (Request.Headers.AcceptEncoding.ToString().Contains("gzip"))
-            {
-                Response.Headers["Content-Encoding"] = "gzip";
-                using var output = new MemoryStream();
-                using (var gzip = new GZipStream(output, CompressionMode.Compress))
-                {
-                    gzip.Write(data, 0, data.Length);
-                }
-                return File(output.ToArray(), "application/x-protobuf");
-            }
-
-            return File(data, "application/x-protobuf");
+            return new EmptyResult();
         }
 
         [HttpGet("json")]
