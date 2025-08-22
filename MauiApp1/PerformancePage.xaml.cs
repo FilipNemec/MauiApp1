@@ -109,7 +109,7 @@ namespace MauiApp1
                 response.EnsureSuccessStatusCode();
 
                 var bytes = await response.Content.ReadAsByteArrayAsync();
-                sw.Stop();
+
 
                 // Optional: Log compression info for debugging
                 var contentEncoding = response.Content.Headers.ContentEncoding?.FirstOrDefault();
@@ -127,7 +127,7 @@ namespace MauiApp1
                 {
                     var taskList = System.Text.Json.JsonSerializer.Deserialize<TaskList>(bytes);
                 }
-
+                sw.Stop();
                 long micros = (long)(sw.ElapsedTicks * 1_000_000.0 / System.Diagnostics.Stopwatch.Frequency);
 
                 return new PerfResult(
