@@ -37,7 +37,7 @@ namespace WebApplication1.Controllers
 
             await pipeWriter.FlushAsync(HttpContext.RequestAborted);
 
-            return new EmptyResult();
+            return Ok();
         }
 
         [HttpGet("json")]
